@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# This script will be executed *after* all the other init scripts.
+# You can put your own initialization stuff in here if you don't
+# want to do the full Sys V style init stuff.
+
+touch /var/lock/subsys/local
+if [ ! -d /root/.ssh ] ; then
+    mkdir -p /root/.ssh
+    chmod 0700 /root/.ssh
+    restorecon /root/.ssh
+fi
+
+# bz 707364
+if [ ! -f /etc/blkid/blkid.tab ] ; then
+        blkid /dev/xvda &>/dev/null
+fi
+
+# swap
+SWAPFILE=/swap
+
+swap_status=$(swapon -s | wc -l)
+if [ "$swap_status" -gt "1" ];then
+    echo "already swap on"
+    exit
+fi
+
+if [ -e $SWAPFILE ];then
+    swapon $SWAPFILE
+    exit
+fi
+
+disk_space=$(df -P /mnt | tail -1 | perl -nlae 'print "OK" if $F[3]/1024/1024 > 13')
+if [ "$disk_space" = "OK" ];then
+    echo "make swap file"
+    ionice -c3 nice -n 19 dd if=/dev/zero of=$SWAPFILE bs=1M count=10000
+    mkswap $SWAPFILE
+    swapon $SWAPFILE
+fi

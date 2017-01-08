@@ -1,0 +1,12 @@
+---
+
+- name: swapファイル作成スクリプトの配置(Ubuntu)
+  template: src=rc.local.j2 dest=/etc/rc.local owner=root group=root mode=0755
+  when: ansible_distribution == "Ubuntu"
+
+- name: swapファイル作成スクリプトの配置(Red Hat)
+  template: src=rc.local_redhat.j2 dest=/etc/rc.local owner=root group=root mode=0755
+  when: ansible_distribution == "RedHat"
+
+- name: swap作成スクリプトの実行
+  command: /etc/rc.local

@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+SWAPFILE=/mnt/swap
+
+swap_status=$(swapon -s | wc -l)
+if [ "$swap_status" -gt "1" ];then
+    echo "already swap on"
+    exit
+fi
+
+if [ -e $SWAPFILE ];then
+    swapon $SWAPFILE
+    exit
+fi
+
+disk_space=$(df -P /mnt | tail -1 | perl -nlae 'print "OK" if $F[3]/1024/1024 > 13')
+if [ "$disk_space" = "OK" ];then
+    echo "make swap file"
+    ionice -c3 nice -n 19 dd if=/dev/zero of=$SWAPFILE bs=1M count=10000
+    mkswap $SWAPFILE
+    swapon $SWAPFILE
+fi
