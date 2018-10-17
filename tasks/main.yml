@@ -1,12 +1,35 @@
 ---
 
-- name: swapファイル作成スクリプトの配置(Ubuntu)
-  template: src=rc.local.j2 dest=/etc/rc.local owner=root group=root mode=0755
-  when: ansible_distribution == "Ubuntu"
+- stat: path=/swap
+  register: s
 
-- name: swapファイル作成スクリプトの配置(Red Hat)
-  template: src=rc.local_redhat.j2 dest=/etc/rc.local owner=root group=root mode=0755
-  when: ansible_distribution == "RedHat"
+- shell: fallocate -l {{ ec2_swap_size }} /swap
+  when: s.stat.exists == false
 
-- name: swap作成スクリプトの実行
-  command: /etc/rc.local
+- file:
+    path: /swap
+    mode: '0600'
+
+- shell: mkswap /swap
+  when: s.stat.exists == false
+
+- mount: 
+    name: swap
+    src: /swap
+    fstype: swap
+    opts: defaults
+    passno: '0'
+    dump: '0'
+    state: present
+
+- name: 不要パッケージ
+  apt: name={{ item }} state=absent autoremove=yes autoclean=yes
+  with_items:
+    - snapd
+    - mdadm
+    - open-iscsi
+    - lvm2
+    - at
+    - lxcfs
+    - accountsservice
+    - policykit-1
